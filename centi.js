@@ -128,10 +128,11 @@ function callClaude(prompt) {
         };
 
         child.stdout.on('data', (data) => {
-            output += data.toString();
-            // Reset timer on new data
+            const str = data.toString();
+            // console.log("DEBUG chunk:", str); // Uncomment to see raw chunks
+            output += str;
             if (timer) clearTimeout(timer);
-            timer = setTimeout(finish, 2000); // Wait 2s for more data, else finish
+            timer = setTimeout(finish, 2000); 
         });
 
         child.stderr.on('data', (data) => {
