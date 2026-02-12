@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const readline = require('readline');
-const { spawn, exec } = require('child_process');
+const { exec } = require('child_process');
 
 // --- Welcome Screen ---
 function showWelcomeScreen() {
@@ -85,7 +85,6 @@ rl.on('line', async (line) => {
   if (currentModel === 'Claude') {
     response = await callClaude(input);
     
-    // Check strict trigger phrase
     if (response === "limit_hit_trigger") {
         console.log("\x1b[31m[System] Claude Limit Hit! Switching to Copilot...\x1b[0m");
         currentModel = 'Copilot';
@@ -105,38 +104,27 @@ rl.on('line', async (line) => {
 
 function callClaude(prompt) {
     return new Promise((resolve) => {
-        const cmd = '/opt/homebrew/bin/claude';
-        // Using spawn for better stream handling
-        const child = spawn(cmd, ['-p', prompt, '--dangerously-skip-permissions'], {
-            env: process.env, // Pass environment variables
-            shell: true       // Run in shell to match terminal behavior
-        });
+        const safePrompt = prompt.replace(/"/g, '\\"');
+        const cmd = `/opt/homebrew/bin/claude -p "${safePrompt}" --dangerously-skip-permissions`;
 
-        let output = "";
-        let errorOutput = "";
-
-        child.stdout.on('data', (data) => { output += data.toString(); });
-        child.stderr.on('data', (data) => { errorOutput += data.toString(); });
-
-        child.on('close', (code) => {
-            const fullText = (output + errorOutput).toLowerCase();
+        // Exec buffers output and waits for process to exit.
+        // It returns an error if exit code != 0, BUT we can still read stdout/stderr.
+        exec(cmd, { timeout: 45000 }, (error, stdout, stderr) => {
+            const combined = (stdout || "") + (stderr || "");
             
-            // Debug Log (Hidden in normal use, enabled if needed)
-            // console.log("DEBUG RAW:", fullText);
-
-            if (fullText.includes("limit") || fullText.includes("quota") || fullText.includes("429")) {
+            // 1. Check for Limit (Priority)
+            if (combined.toLowerCase().includes("limit") || combined.toLowerCase().includes("quota") || combined.includes("429")) {
                 return resolve("limit_hit_trigger");
             }
 
-            if (code !== 0) {
-                return resolve(`Exit Code: ${code}\nSTDOUT: ${output}\nSTDERR: ${errorOutput}`);
+            // 2. Check for Real Error
+            if (error) {
+                // If it failed but NOT due to limit, return the error details
+                return resolve(`Error Code: ${error.code}\nOutput: ${combined}`);
             }
-            
-            resolve(output.trim());
-        });
 
-        child.on('error', (err) => {
-            resolve(`Spawn Error: ${err.message}`);
+            // 3. Success
+            resolve(stdout.trim());
         });
     });
 }
