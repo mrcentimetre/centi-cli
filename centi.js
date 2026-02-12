@@ -35,8 +35,7 @@ rl.on('line', async (line) => {
   if (currentModel === 'Claude') {
     response = await callClaude(input);
     
-    // Check for Rate Limit / Error in response
-    if (response.includes("429") || response.includes("limit") || response.includes("quota")) {
+    if (response.includes("limit_hit_trigger")) {
         console.log("\x1b[31m[System] Claude Limit Hit! Switching to Copilot...\x1b[0m");
         currentModel = 'Copilot';
         response = await callCopilot(input);
@@ -64,8 +63,15 @@ function callClaude(prompt) {
         const claudeCmd = '/opt/homebrew/bin/claude';
         
         exec(`${claudeCmd} -p "${safePrompt}" --dangerously-skip-permissions`, { timeout: 45000 }, (error, stdout, stderr) => {
+            // Combine stdout and stderr to check for limits
+            const fullOutput = (stdout || "") + (stderr || "");
+            
+            // Even if error occurs (exit code 1), check if it's a limit issue
+            if (fullOutput.includes("limit") || fullOutput.includes("quota") || fullOutput.includes("429")) {
+                return resolve("limit_hit_trigger"); // Special keyword for main loop
+            }
+
             if (error) {
-                // Return detailed error for debugging
                 return resolve(`Error: ${error.message}\nSTDERR: ${stderr}`);
             }
             resolve(stdout.trim());
