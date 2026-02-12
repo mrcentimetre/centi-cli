@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 const readline = require('readline');
-const { spawn } = require('child_process');
+const { exec } = require('child_process');
 
-console.log("\x1b[36m%s\x1b[0m", "Centi CLI v0.1 🤖 - The Ultimate Switcher");
-console.log("\x1b[33m%s\x1b[0m", "Mode: Auto-Switch (Claude -> Copilot)");
+console.log("\x1b[36m%s\x1b[0m", "Centi CLI v0.2 🤖 - Real Integration");
+console.log("\x1b[33m%s\x1b[0m", "Primary: Claude | Fallback: GitHub Copilot");
 console.log("----------------------------------------");
 
 const rl = readline.createInterface({
@@ -12,8 +12,8 @@ const rl = readline.createInterface({
   prompt: '\x1b[32mYou > \x1b[0m'
 });
 
-let currentModel = 'Claude'; // Start with Claude
-let contextHistory = [];
+let currentModel = 'Claude'; // Default
+let contextHistory = []; // To keep track of conversation (simplistic for now)
 
 rl.prompt();
 
@@ -24,45 +24,63 @@ rl.on('line', async (line) => {
     process.exit(0);
   }
 
-  // 1. Save Context
-  contextHistory.push({ role: 'user', content: input });
+  // Save context (in memory only for now)
+  contextHistory.push(`User: ${input}`);
 
-  // 2. Determine Model (Quota Check Mock)
-  // For demo: if input contains "limit", switch model.
-  if (input.includes('limit')) {
-    currentModel = currentModel === 'Claude' ? 'Copilot' : 'Claude';
-    console.log(`\x1b[31m[System] Quota limit hit! Switching to ${currentModel}...\x1b[0m`);
-  }
-
-  // 3. Process with Model
-  console.log(`\x1b[35m[${currentModel} Thinking...]\x1b[0m`);
+  // Decide execution strategy
+  console.log(`\x1b[35m[${currentModel} working...]\x1b[0m`);
   
-  try {
-    const response = await getResponse(currentModel, input, contextHistory);
-    console.log(`\x1b[34m${currentModel} >\x1b[0m ${response}`);
-    contextHistory.push({ role: 'assistant', content: response });
-  } catch (e) {
-    console.error("Error:", e);
+  let response = "";
+  
+  if (currentModel === 'Claude') {
+    response = await callClaude(input);
+    
+    // Check for Rate Limit / Error in response
+    if (response.includes("429") || response.includes("limit") || response.includes("quota")) {
+        console.log("\x1b[31m[System] Claude Limit Hit! Switching to Copilot...\x1b[0m");
+        currentModel = 'Copilot';
+        response = await callCopilot(input);
+    }
+  } else {
+    response = await callCopilot(input);
   }
+
+  console.log(`\x1b[34m${currentModel} >\x1b[0m\n${response}`);
+  contextHistory.push(`AI: ${response}`);
 
   rl.prompt();
-}).on('close', () => {
-  console.log('Bye!');
-  process.exit(0);
 });
 
-// Mock Function to simulate CLI call
-async function getResponse(model, input, history) {
-  return new Promise((resolve) => {
-    // Here we will spawn the actual process later
-    // spawn('claude', ['-p', input])
-    
-    setTimeout(() => {
-        if(model === 'Copilot' && history.length > 1) {
-            resolve(`(Context Aware): I see you said "${history[history.length-2].content}" earlier. Here is the answer.`);
-        } else {
-            resolve(`This is a response from ${model} for "${input}".`);
-        }
-    }, 1000);
-  });
+// --- Adapters ---
+
+function callClaude(prompt) {
+    return new Promise((resolve) => {
+        // Assuming 'claude' CLI is installed and supports -p or direct input
+        // Adjust command based on actual installed binary (e.g. 'claude-3')
+        // Escaping quotes for shell safety (basic)
+        const safePrompt = prompt.replace(/"/g, '\\"');
+        
+        // Timeout set to 15s to prevent hanging
+        exec(`claude "${safePrompt}"`, { timeout: 15000 }, (error, stdout, stderr) => {
+            if (error) {
+                // If 'claude' command not found or errors out
+                return resolve(`Error: ${stderr || error.message}`);
+            }
+            resolve(stdout.trim());
+        });
+    });
+}
+
+function callCopilot(prompt) {
+    return new Promise((resolve) => {
+        // Using 'gh copilot explain' as it's non-interactive usually
+        const safePrompt = prompt.replace(/"/g, '\\"');
+        
+        exec(`gh copilot explain "${safePrompt}"`, { timeout: 15000 }, (error, stdout, stderr) => {
+            if (error) {
+                return resolve(`Error: ${stderr || error.message}`);
+            }
+            resolve(stdout.trim());
+        });
+    });
 }
