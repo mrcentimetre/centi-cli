@@ -2,9 +2,62 @@
 const readline = require('readline');
 const { spawn, exec } = require('child_process');
 
-console.log("\x1b[36m%s\x1b[0m", "Centi CLI v0.3 🤖 - Spawn Upgrade");
-console.log("\x1b[33m%s\x1b[0m", "Primary: Claude | Fallback: GitHub Copilot");
-console.log("----------------------------------------");
+// --- Welcome Screen ---
+function showWelcomeScreen() {
+  const width = process.stdout.columns || 80;
+  const centerPad = Math.max(0, Math.floor((width - 60) / 2));
+  const pad = ' '.repeat(centerPad);
+
+  // ASCII Art Logo
+  const logo = [
+    '   ██████╗███████╗███╗   ██╗████████╗██╗',
+    '  ██╔════╝██╔════╝████╗  ██║╚══██╔══╝██║',
+    '  ██║     █████╗  ██╔██╗ ██║   ██║   ██║',
+    '  ██║     ██╔══╝  ██║╚██╗██║   ██║   ██║',
+    '  ╚██████╗███████╗██║ ╚████║   ██║   ██║',
+    '   ╚═════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝'
+  ];
+
+  // Gradient colors (cyan -> magenta -> blue)
+  const colors = ['\x1b[36m', '\x1b[95m', '\x1b[94m', '\x1b[35m', '\x1b[34m', '\x1b[36m'];
+
+  console.clear();
+  console.log('\n');
+
+  // Box top
+  console.log(pad + '\x1b[36m╭' + '─'.repeat(58) + '╮\x1b[0m');
+  console.log(pad + '\x1b[36m│' + ' '.repeat(58) + '│\x1b[0m');
+
+  // Render logo with gradient
+  logo.forEach((line, i) => {
+    const color = colors[i % colors.length];
+    console.log(pad + '\x1b[36m│\x1b[0m' + color + '  ' + line + '\x1b[0m' + ' '.repeat(58 - line.length - 2) + '\x1b[36m│\x1b[0m');
+  });
+
+  console.log(pad + '\x1b[36m│' + ' '.repeat(58) + '│\x1b[0m');
+
+  // Info section
+  console.log(pad + '\x1b[36m│\x1b[0m' + '  \x1b[33m🤖 Multi-Model AI Chat CLI\x1b[0m' + ' '.repeat(29) + '\x1b[36m│\x1b[0m');
+  console.log(pad + '\x1b[36m│\x1b[0m' + '  \x1b[90mv0.3.0 - Spawn Upgrade\x1b[0m' + ' '.repeat(32) + '\x1b[36m│\x1b[0m');
+  console.log(pad + '\x1b[36m│' + ' '.repeat(58) + '│\x1b[0m');
+
+  // Model status
+  console.log(pad + '\x1b[36m│\x1b[0m' + '  \x1b[92m●\x1b[0m \x1b[1mPrimary:\x1b[0m Claude' + ' '.repeat(37) + '\x1b[36m│\x1b[0m');
+  console.log(pad + '\x1b[36m│\x1b[0m' + '  \x1b[93m○\x1b[0m \x1b[1mFallback:\x1b[0m GitHub Copilot' + ' '.repeat(28) + '\x1b[36m│\x1b[0m');
+  console.log(pad + '\x1b[36m│' + ' '.repeat(58) + '│\x1b[0m');
+
+  // Commands
+  console.log(pad + '\x1b[36m│\x1b[0m' + '  \x1b[2mCommands: \x1b[36mexit\x1b[0m\x1b[2m or \x1b[36mquit\x1b[0m\x1b[2m to close\x1b[0m' + ' '.repeat(22) + '\x1b[36m│\x1b[0m');
+
+  // Box bottom
+  console.log(pad + '\x1b[36m│' + ' '.repeat(58) + '│\x1b[0m');
+  console.log(pad + '\x1b[36m╰' + '─'.repeat(58) + '╯\x1b[0m');
+
+  console.log('\n');
+}
+
+// Show welcome screen on startup
+showWelcomeScreen();
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -12,7 +65,7 @@ const rl = readline.createInterface({
   prompt: '\x1b[32mYou > \x1b[0m'
 });
 
-let currentModel = 'Claude'; 
+let currentModel = 'Claude';
 let contextHistory = [];
 
 rl.prompt();
