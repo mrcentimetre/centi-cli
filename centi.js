@@ -104,28 +104,53 @@ rl.on('line', async (line) => {
 
 function callClaude(prompt) {
     return new Promise((resolve) => {
-        const safePrompt = prompt.replace(/"/g, '\\"');
-        const cmd = `/opt/homebrew/bin/claude -p "${safePrompt}" --dangerously-skip-permissions`;
+        const cmd = '/opt/homebrew/bin/claude';
+        const child = spawn(cmd, ['-p', prompt, '--dangerously-skip-permissions'], {
+            env: process.env
+        });
 
-        // Exec buffers output and waits for process to exit.
-        // It returns an error if exit code != 0, BUT we can still read stdout/stderr.
-        exec(cmd, { timeout: 45000 }, (error, stdout, stderr) => {
-            const combined = (stdout || "") + (stderr || "");
+        let output = "";
+        let errorOutput = "";
+        let timer = null;
+
+        // Debounce function to resolve when stream pauses
+        const finish = () => {
+            if (timer) clearTimeout(timer);
+            const fullText = (output + errorOutput).toLowerCase();
             
-            // 1. Check for Limit (Priority)
-            if (combined.toLowerCase().includes("limit") || combined.toLowerCase().includes("quota") || combined.includes("429")) {
+            if (fullText.includes("limit") || fullText.includes("quota") || fullText.includes("429")) {
+                child.kill(); // Kill process if limit hit
                 return resolve("limit_hit_trigger");
             }
+            
+            child.kill(); // Kill process as we assume it's done
+            resolve(output.trim() || errorOutput.trim());
+        };
 
-            // 2. Check for Real Error
-            if (error) {
-                // If it failed but NOT due to limit, return the error details
-                return resolve(`Error Code: ${error.code}\nOutput: ${combined}`);
-            }
-
-            // 3. Success
-            resolve(stdout.trim());
+        child.stdout.on('data', (data) => {
+            output += data.toString();
+            // Reset timer on new data
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(finish, 2000); // Wait 2s for more data, else finish
         });
+
+        child.stderr.on('data', (data) => {
+            errorOutput += data.toString();
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(finish, 2000);
+        });
+
+        child.on('close', (code) => {
+            if (timer) clearTimeout(timer);
+            const fullText = (output + errorOutput).toLowerCase();
+            if (fullText.includes("limit") || fullText.includes("quota")) {
+                return resolve("limit_hit_trigger");
+            }
+            resolve(output.trim() || errorOutput.trim());
+        });
+        
+        // Initial timeout if nothing happens
+        timer = setTimeout(finish, 45000);
     });
 }
 
