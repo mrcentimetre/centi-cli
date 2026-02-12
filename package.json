@@ -1,0 +1,14 @@
+{
+  "name": "centi-cli",
+  "version": "0.1.0",
+  "description": "The Ultimate Model Switcher CLI",
+  "bin": {
+    "centi": "./centi.js"
+  },
+  "scripts": {
+    "start": "node centi.js"
+  },
+  "dependencies": {},
+  "author": "Centi",
+  "license": "MIT"
+}
