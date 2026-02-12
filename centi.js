@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const readline = require('readline');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 
 // --- Welcome Screen ---
 function showWelcomeScreen() {
