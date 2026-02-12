@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 const readline = require('readline');
-const { exec } = require('child_process');
+const { spawn, exec } = require('child_process');
 
-console.log("\x1b[36m%s\x1b[0m", "Centi CLI v0.2 🤖 - Real Integration");
+console.log("\x1b[36m%s\x1b[0m", "Centi CLI v0.3 🤖 - Spawn Upgrade");
 console.log("\x1b[33m%s\x1b[0m", "Primary: Claude | Fallback: GitHub Copilot");
 console.log("----------------------------------------");
 
@@ -12,8 +12,8 @@ const rl = readline.createInterface({
   prompt: '\x1b[32mYou > \x1b[0m'
 });
 
-let currentModel = 'Claude'; // Default
-let contextHistory = []; // To keep track of conversation (simplistic for now)
+let currentModel = 'Claude'; 
+let contextHistory = [];
 
 rl.prompt();
 
@@ -24,10 +24,7 @@ rl.on('line', async (line) => {
     process.exit(0);
   }
 
-  // Save context (in memory only for now)
   contextHistory.push(`User: ${input}`);
-
-  // Decide execution strategy
   console.log(`\x1b[35m[${currentModel} working...]\x1b[0m`);
   
   let response = "";
@@ -35,7 +32,8 @@ rl.on('line', async (line) => {
   if (currentModel === 'Claude') {
     response = await callClaude(input);
     
-    if (response.includes("limit_hit_trigger")) {
+    // Check strict trigger phrase
+    if (response === "limit_hit_trigger") {
         console.log("\x1b[31m[System] Claude Limit Hit! Switching to Copilot...\x1b[0m");
         currentModel = 'Copilot';
         response = await callCopilot(input);
@@ -54,37 +52,46 @@ rl.on('line', async (line) => {
 
 function callClaude(prompt) {
     return new Promise((resolve) => {
-        // Assuming 'claude' CLI is installed and supports -p or direct input
-        // Adjust command based on actual installed binary (e.g. 'claude-3')
-        // Escaping quotes for shell safety (basic)
-        const safePrompt = prompt.replace(/"/g, '\\"');
-        
-        // Use Absolute Path for Homebrew Claude
-        const claudeCmd = '/opt/homebrew/bin/claude';
-        
-        exec(`${claudeCmd} -p "${safePrompt}" --dangerously-skip-permissions`, { timeout: 45000 }, (error, stdout, stderr) => {
-            // Combine stdout and stderr to check for limits
-            const fullOutput = (stdout || "") + (stderr || "");
+        const cmd = '/opt/homebrew/bin/claude';
+        // Using spawn for better stream handling
+        const child = spawn(cmd, ['-p', prompt, '--dangerously-skip-permissions'], {
+            env: process.env, // Pass environment variables
+            shell: true       // Run in shell to match terminal behavior
+        });
+
+        let output = "";
+        let errorOutput = "";
+
+        child.stdout.on('data', (data) => { output += data.toString(); });
+        child.stderr.on('data', (data) => { errorOutput += data.toString(); });
+
+        child.on('close', (code) => {
+            const fullText = (output + errorOutput).toLowerCase();
             
-            // Even if error occurs (exit code 1), check if it's a limit issue
-            if (fullOutput.includes("limit") || fullOutput.includes("quota") || fullOutput.includes("429")) {
-                return resolve("limit_hit_trigger"); // Special keyword for main loop
+            // Debug Log (Hidden in normal use, enabled if needed)
+            // console.log("DEBUG RAW:", fullText);
+
+            if (fullText.includes("limit") || fullText.includes("quota") || fullText.includes("429")) {
+                return resolve("limit_hit_trigger");
             }
 
-            if (error) {
-                return resolve(`Error: ${error.message}\nSTDERR: ${stderr}`);
+            if (code !== 0) {
+                return resolve(`Exit Code: ${code}\nSTDOUT: ${output}\nSTDERR: ${errorOutput}`);
             }
-            resolve(stdout.trim());
+            
+            resolve(output.trim());
+        });
+
+        child.on('error', (err) => {
+            resolve(`Spawn Error: ${err.message}`);
         });
     });
 }
 
 function callCopilot(prompt) {
     return new Promise((resolve) => {
-        // Using 'gh copilot explain' as it's non-interactive usually
         const safePrompt = prompt.replace(/"/g, '\\"');
-        
-        exec(`gh copilot explain "${safePrompt}"`, { timeout: 15000 }, (error, stdout, stderr) => {
+        exec(`gh copilot explain "${safePrompt}"`, { timeout: 30000 }, (error, stdout, stderr) => {
             if (error) {
                 return resolve(`Error: ${stderr || error.message}`);
             }
