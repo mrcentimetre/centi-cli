@@ -60,8 +60,8 @@ function callClaude(prompt) {
         // Escaping quotes for shell safety (basic)
         const safePrompt = prompt.replace(/"/g, '\\"');
         
-        // Timeout set to 15s to prevent hanging
-        exec(`claude "${safePrompt}"`, { timeout: 15000 }, (error, stdout, stderr) => {
+        // Use -p flag for non-interactive output as per 'claude --help'
+        exec(`claude -p "${safePrompt}"`, { timeout: 30000 }, (error, stdout, stderr) => {
             if (error) {
                 // If 'claude' command not found or errors out
                 return resolve(`Error: ${stderr || error.message}`);
