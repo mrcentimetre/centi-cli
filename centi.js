@@ -65,8 +65,8 @@ function callClaude(prompt) {
         
         exec(`${claudeCmd} -p "${safePrompt}" --dangerously-skip-permissions`, { timeout: 45000 }, (error, stdout, stderr) => {
             if (error) {
-                // If 'claude' command not found or errors out
-                return resolve(`Error: ${stderr || error.message}`);
+                // Return detailed error for debugging
+                return resolve(`Error: ${error.message}\nSTDERR: ${stderr}`);
             }
             resolve(stdout.trim());
         });
