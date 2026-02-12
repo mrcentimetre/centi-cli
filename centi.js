@@ -60,9 +60,10 @@ function callClaude(prompt) {
         // Escaping quotes for shell safety (basic)
         const safePrompt = prompt.replace(/"/g, '\\"');
         
-        // Use -p flag for non-interactive output as per 'claude --help'
-        // Added --dangerously-skip-permissions to avoid interactive prompts blocking the CLI
-        exec(`claude -p "${safePrompt}" --dangerously-skip-permissions`, { timeout: 45000 }, (error, stdout, stderr) => {
+        // Use Absolute Path for Homebrew Claude
+        const claudeCmd = '/opt/homebrew/bin/claude';
+        
+        exec(`${claudeCmd} -p "${safePrompt}" --dangerously-skip-permissions`, { timeout: 45000 }, (error, stdout, stderr) => {
             if (error) {
                 // If 'claude' command not found or errors out
                 return resolve(`Error: ${stderr || error.message}`);
