@@ -3,12 +3,12 @@
 A unified terminal chat interface that wraps Claude and GitHub Copilot with automatic rate-limit failover. When Claude hits its usage limit, Centi silently switches to GitHub Copilot so your workflow is never interrupted.
 
 ```
-   ██████╗███████╗███╗   ██╗████████╗██╗
-  ██╔════╝██╔════╝████╗  ██║╚══██╔══╝██║
-  ██║     █████╗  ██╔██╗ ██║   ██║   ██║
-  ██║     ██╔══╝  ██║╚██╗██║   ██║   ██║
-  ╚██████╗███████╗██║ ╚████║   ██║   ██║
-   ╚═════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝
+     ██████╗   ███████╗  ███╗         ██╗████████╗ ██╗
+  ██╔════╝   ██╔════╝  ████╗      ██║╚══██╔══╝ ██║
+  ██║                    █████╗         ██╔██╗   ██║          ██║            ██║
+  ██║                    ██╔══╝         ██║╚██╗██║          ██║           ██║
+  ╚██████╗   ███████╗ ██║  ╚████║            ██║            ██║
+     ╚═════╝    ╚══════╝╚═╝  ╚═══╝               ╚═╝            ╚═╝
 ```
 
 ## Features
