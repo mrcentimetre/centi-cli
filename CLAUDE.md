@@ -1,8 +1,25 @@
 # Centi CLI
 
-## What Is This?
+## Project Goal: "Centi CLI" - Intelligent Model Switcher
 
-Centi CLI is a terminal-based AI chat tool that acts as a **multi-model switcher**. It uses **Claude** as the primary AI model and automatically falls back to **GitHub Copilot** when Claude hits rate limits.
+### Objective
+Create a unified Command Line Interface (CLI) tool using Node.js that acts as a smart wrapper for multiple AI models (Claude and GitHub Copilot). The tool allows users to chat with AI seamlessly while automatically managing usage limits.
+
+### Core Logic
+
+1. **Unified Interface**: User runs `centi` and gets an interactive chat prompt
+2. **Primary Model (Claude)**: By default, user inputs are sent to the local Claude CLI
+3. **Automatic Failover**: The system monitors the output from Claude. If it detects a "Rate Limit" or "Quota Exceeded" error, it automatically switches the active model to GitHub Copilot (`gh copilot`)
+4. **Context Awareness**: The conversation history is preserved in memory across switches (future: pass to models)
+5. **Zero Config**: Leverages the user's existing authenticated CLI sessions (no new API keys required)
+
+### Current Status
+✅ **Fully functional** with:
+- Beautiful welcome screen with ASCII art
+- Claude and Copilot integration working
+- Automatic failover on rate limits
+- Session persistence (save/resume conversations)
+- Context history tracking
 
 ## Architecture
 
@@ -45,6 +62,7 @@ Single-file Node.js CLI (`centi.js`) with no external dependencies.
 
 ## Commands
 
+### Running Centi
 ```bash
 # Run directly
 node centi.js
@@ -55,6 +73,35 @@ npm start
 # Install globally (after npm link)
 centi
 ```
+
+### Available Commands (in CLI)
+
+Type `/help` in the CLI to see all commands.
+
+**Session Management:**
+- `/save` - Save current conversation to a session file
+- `/resume` - Resume a previously saved session (interactive picker)
+- `/sessions` - List all saved sessions with timestamps
+- `/clear` - Clear current conversation history
+- `/history` - View current conversation history
+- `/delete <number>` - Delete a specific session by number
+
+**Model Control:**
+- `/model` - Show active model and select a different one (interactive)
+- `/switch` - Quickly toggle between Claude and Copilot
+- `/test-copilot` - Test Copilot connection
+
+**Help & Exit:**
+- `/help` - Show all available commands with descriptions
+- `/exit` or `/quit` - Close the CLI
+
+### Session Storage
+Sessions are saved to `~/.centi-sessions/` as JSON files containing:
+- Start time and save time
+- Current active model
+- Full conversation history (user prompts + AI responses)
+
+Sessions are timestamped and sorted by most recent first.
 
 ## Inspiration References
 
